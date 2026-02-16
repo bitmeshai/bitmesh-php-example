@@ -1,0 +1,21 @@
+{
+    "name": "bitmeshai/bitmesh-php-sdk-demo",
+    "description": "Simple demo for Bitmesh.ai API SDK for PHP",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "bitmeshai/bitmesh-php-sdk": "dev-master",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/bitmeshai/bitmesh-php-sdk"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "BitmeshExample\\": "src/"
+        }
+    }
+}
