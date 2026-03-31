@@ -109,11 +109,11 @@ $consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
 
 $client = new BitmeshClient($consumerKey, $consumerSecret);
 
-// One-shot chat: pass message, then model name
-$response = $client->chat(
-    'What are some fun things to do with AI?',
-    'google/gemma-3n-e4b-it'
-);
+// Chat with system and user messages
+$response = $client->chat([
+    ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+    ['role' => 'user', 'content' => 'What are some fun things to do with AI?']
+], 'meta-llama/Llama-3.2-3B-Instruct-Turbo', ['max_tokens' => 1000]);
 
 // Response has 'choices' and optionally 'usage'
 $content = $response['choices'][0]['message']['content'] ?? json_encode($response);
@@ -128,7 +128,10 @@ PHP;
         if ($consumerKey !== '' && $consumerSecret !== '') {
             try {
                 $client = new BitmeshClient($consumerKey, $consumerSecret);
-                $response = $client->chat('Say "Hello from Bitmesh" in one short sentence.', 'google/gemma-3n-e4b-it');
+                $response = $client->chat([
+                    ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+                    ['role' => 'user', 'content' => 'Say "Hello from Bitmesh" in one short sentence.']
+                ], 'meta-llama/Meta-Llama-3-8B-Instruct-Lite', ['max_tokens' => 1000]);
                 $html .= "<h2>API response</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
                 $content = $response['choices'][0]['message']['content'] ?? null;
                 if ($content !== null) {
