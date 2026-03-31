@@ -13,6 +13,7 @@ final class Router
         '/chat' => 'chat',
         '/chat-vision' => 'chatVision',
         '/image' => 'image',
+        '/image-to-image' => 'imageToImage',
         '/video' => 'video',
         '/video-status' => 'videoStatus',
     ];
@@ -33,7 +34,7 @@ final class Router
 
         if ($action === null) {
             http_response_code(404);
-            echo $this->renderLayout('Not found', '<p>Page not found. Try <a href="/chat">/chat</a>, <a href="/chat-vision">/chat-vision</a>, <a href="/image">/image</a>, <a href="/video">/video</a>, <a href="/video-status">/video-status</a>.</p>');
+            echo $this->renderLayout('Not found', '<p>Page not found. Try <a href="/chat">/chat</a>, <a href="/chat-vision">/chat-vision</a>, <a href="/image">/image</a>, <a href="/image-to-image">/image-to-image</a>, <a href="/video">/video</a>, <a href="/video-status">/video-status</a>.</p>');
             return;
         }
 
@@ -42,7 +43,7 @@ final class Router
 
     private function home(): void
     {
-        echo $this->renderLayout('Home', '<h1>Bitmesh Demo</h1><p>Choose: <a href="/chat">Chat</a>, <a href="/chat-vision">Chat Vision</a>, <a href="/image">Image</a>, <a href="/video">Video</a>.</p>');
+        echo $this->renderLayout('Home', '<h1>Bitmesh Demo</h1><p>Choose: <a href="/chat">Chat</a>, <a href="/chat-vision">Chat Vision</a>, <a href="/image">Image</a>, <a href="/image-to-image">Image to Image</a>, <a href="/video">Video</a>.</p>');
     }
 
     private function chat(): void
@@ -58,6 +59,11 @@ final class Router
     private function image(): void
     {
         echo $this->renderLayout('Image', $this->renderImage());
+    }
+
+    private function imageToImage(): void
+    {
+        echo $this->renderLayout('Image to Image', $this->renderImageToImage());
     }
 
     private function video(): void
@@ -94,6 +100,7 @@ final class Router
         <a href="/chat">Chat</a>
         <a href="/chat-vision">Chat Vision</a>
         <a href="/image">Image</a>
+        <a href="/image-to-image">Image to Image</a>
         <a href="/video">Video</a>
     </nav>
     {$body}
@@ -258,6 +265,78 @@ PHP;
                     'A cute robot reading a book, digital art',
                     'rundiffusion/juggernaut-lightning-flux',
                     ['width' => 1024, 'height' => 1024]
+                );
+                $html .= "<h2>API response</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
+                $data = $response['data'] ?? [];
+                if (is_array($data) && $data !== []) {
+                    $html .= "<h2>Generated image</h2>";
+                    foreach ($data as $item) {
+                        $url = $item['url'] ?? null;
+                        if ($url !== null && $url !== '') {
+                            $html .= '<p><img src="' . htmlspecialchars($url) . '" alt="Generated" style="max-width:100%;height:auto;border:1px solid #ddd;" /></p>';
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $html .= "<h2>API response</h2><p class=\"error\">Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+        } else {
+            $html .= "<h2>API response</h2><p>Set <code>BITMESH_CONSUMER_KEY</code> and <code>BITMESH_CONSUMER_SECRET</code> in your environment to see a live response above.</p>";
+        }
+
+        return $html;
+    }
+
+    private function renderImageToImage(): string
+    {
+        $snippet = <<<'PHP'
+<?php
+
+require 'vendor/autoload.php';
+
+use BitmeshAI\BitmeshClient;
+
+$consumerKey = getenv('BITMESH_CONSUMER_KEY') ?: 'YOUR_CONSUMER_KEY';
+$consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
+$apiBaseUrl = getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app';
+
+$client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
+
+// Image-to-image: prompt, model, and reference image URL(s)
+$response = $client->image(
+    'Make this cat smile',
+    'wan-ai/wan2.6-image',
+    [
+        'reference_images' => [
+            'https://placecats.com/800/600',
+        ],
+    ]
+);
+
+// Image URL(s) are in data[].url
+$url = $response['data'][0]['url'] ?? null;
+if ($url) {
+    echo '<img src="' . htmlspecialchars($url) . '" alt="Generated" />';
+}
+PHP;
+        $html = "<h1>Image to Image</h1><p>Generate an image using model <code>wan-ai/wan2.6-image</code> with one <code>reference_images</code> URL.</p>";
+        $html .= "<h2>Example code</h2><pre>" . htmlspecialchars($snippet) . "</pre>";
+
+        $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
+        $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
+
+        if ($consumerKey !== '' && $consumerSecret !== '') {
+            try {
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
+                $response = $client->image(
+                    'Make this cat smile',
+                    'wan-ai/wan2.6-image',
+                    [
+                        'reference_images' => [
+                            'https://placecats.com/800/600',
+                        ],
+                    ]
                 );
                 $html .= "<h2>API response</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
                 $data = $response['data'] ?? [];
