@@ -11,6 +11,7 @@ final class Router
     private const ROUTES = [
         '/' => 'home',
         '/chat' => 'chat',
+        '/chat-vision' => 'chatVision',
         '/image' => 'image',
         '/video' => 'video',
         '/video-status' => 'videoStatus',
@@ -32,7 +33,7 @@ final class Router
 
         if ($action === null) {
             http_response_code(404);
-            echo $this->renderLayout('Not found', '<p>Page not found. Try <a href="/chat">/chat</a>, <a href="/image">/image</a>, <a href="/video">/video</a>, <a href="/video-status">/video-status</a>.</p>');
+            echo $this->renderLayout('Not found', '<p>Page not found. Try <a href="/chat">/chat</a>, <a href="/chat-vision">/chat-vision</a>, <a href="/image">/image</a>, <a href="/video">/video</a>, <a href="/video-status">/video-status</a>.</p>');
             return;
         }
 
@@ -41,12 +42,17 @@ final class Router
 
     private function home(): void
     {
-        echo $this->renderLayout('Home', '<h1>Bitmesh Demo</h1><p>Choose: <a href="/chat">Chat</a>, <a href="/image">Image</a>, <a href="/video">Video</a>.</p>');
+        echo $this->renderLayout('Home', '<h1>Bitmesh Demo</h1><p>Choose: <a href="/chat">Chat</a>, <a href="/chat-vision">Chat Vision</a>, <a href="/image">Image</a>, <a href="/video">Video</a>.</p>');
     }
 
     private function chat(): void
     {
         echo $this->renderLayout('Chat', $this->renderChat());
+    }
+
+    private function chatVision(): void
+    {
+        echo $this->renderLayout('Chat Vision', $this->renderChatVision());
     }
 
     private function image(): void
@@ -86,6 +92,7 @@ final class Router
 <body>
     <nav>
         <a href="/chat">Chat</a>
+        <a href="/chat-vision">Chat Vision</a>
         <a href="/image">Image</a>
         <a href="/video">Video</a>
     </nav>
@@ -106,32 +113,94 @@ use BitmeshAI\BitmeshClient;
 
 $consumerKey = getenv('BITMESH_CONSUMER_KEY') ?: 'YOUR_CONSUMER_KEY';
 $consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
+$apiBaseUrl = getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app';
 
-$client = new BitmeshClient($consumerKey, $consumerSecret);
+$client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
 
 // Chat with system and user messages
 $response = $client->chat([
     ['role' => 'system', 'content' => 'You are a helpful assistant.'],
     ['role' => 'user', 'content' => 'What are some fun things to do with AI?']
-], 'meta-llama/Llama-3.2-3B-Instruct-Turbo', ['max_tokens' => 1000]);
+], 'google/gemma-3n-e4b-it', ['max_tokens' => 1000]);
 
 // Response has 'choices' and optionally 'usage'
 $content = $response['choices'][0]['message']['content'] ?? json_encode($response);
 echo $content;
 PHP;
-        $html = "<h1>Chat</h1><p>Basic PHP example using the Bitmesh SDK.</p>";
+        $html = "<h1>Chat</h1><p>Basic text-only PHP example using the Bitmesh SDK.</p>";
         $html .= "<h2>Example code</h2><pre>" . htmlspecialchars($snippet) . "</pre>";
 
         $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
         $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
 
         if ($consumerKey !== '' && $consumerSecret !== '') {
             try {
-                $client = new BitmeshClient($consumerKey, $consumerSecret);
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
                 $response = $client->chat([
                     ['role' => 'system', 'content' => 'You are a helpful assistant.'],
                     ['role' => 'user', 'content' => 'Say "Hello from Bitmesh" in one short sentence.']
-                ], 'meta-llama/Meta-Llama-3-8B-Instruct-Lite', ['max_tokens' => 1000]);
+                ], 'google/gemma-3n-e4b-it', ['max_tokens' => 1000]);
+                $html .= "<h2>API response</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
+                $content = $response['choices'][0]['message']['content'] ?? null;
+                if ($content !== null) {
+                    $html .= "<p><strong>Assistant reply:</strong> " . htmlspecialchars($content) . "</p>";
+                }
+            } catch (\Throwable $e) {
+                $html .= "<h2>API response</h2><p class=\"error\">Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+        } else {
+            $html .= "<h2>API response</h2><p>Set <code>BITMESH_CONSUMER_KEY</code> and <code>BITMESH_CONSUMER_SECRET</code> in your environment to see a live response above.</p>";
+        }
+
+        return $html;
+    }
+
+    private function renderChatVision(): string
+    {
+        $snippet = <<<'PHP'
+<?php
+
+require 'vendor/autoload.php';
+
+use BitmeshAI\BitmeshClient;
+
+$consumerKey = getenv('BITMESH_CONSUMER_KEY') ?: 'YOUR_CONSUMER_KEY';
+$consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
+$apiBaseUrl = getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app';
+
+$client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
+
+// Chat with structured multimodal content
+$response = $client->chat([
+    ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+    ['role' => 'user', 'content' => [
+        ['type' => 'text', 'text' => 'solve this riddle'],
+        ['type' => 'image_url', 'image_url' => ['url' => 'https://cdn1.byjus.com/wp-content/uploads/2020/10/maths-puzzles-example-2-solution.png']]
+    ]]
+], 'google/gemma-3n-e4b-it', ['max_tokens' => 1000]);
+
+// Response has 'choices' and optionally 'usage'
+$content = $response['choices'][0]['message']['content'] ?? json_encode($response);
+echo $content;
+PHP;
+        $html = "<h1>Chat Vision</h1><p>Multimodal PHP example using structured message content.</p>";
+        $html .= "<h2>Example code</h2><pre>" . htmlspecialchars($snippet) . "</pre>";
+
+        $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
+        $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
+
+        if ($consumerKey !== '' && $consumerSecret !== '') {
+            try {
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
+                $response = $client->chat([
+                    ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+                    ['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => 'solve this riddle'],
+                        ['type' => 'image_url', 'image_url' => ['url' => 'https://cdn1.byjus.com/wp-content/uploads/2020/10/maths-puzzles-example-2-solution.png']]
+                    ]]
+                ], 'google/gemma-3n-e4b-it', ['max_tokens' => 1000]);
                 $html .= "<h2>API response</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
                 $content = $response['choices'][0]['message']['content'] ?? null;
                 if ($content !== null) {
@@ -158,8 +227,9 @@ use BitmeshAI\BitmeshClient;
 
 $consumerKey = getenv('BITMESH_CONSUMER_KEY') ?: 'YOUR_CONSUMER_KEY';
 $consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
+$apiBaseUrl = getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app';
 
-$client = new BitmeshClient($consumerKey, $consumerSecret);
+$client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
 
 // Generate image: prompt, model name, optional options (width, height, steps, seed, n)
 $response = $client->image(
@@ -179,10 +249,11 @@ PHP;
 
         $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
         $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
 
         if ($consumerKey !== '' && $consumerSecret !== '') {
             try {
-                $client = new BitmeshClient($consumerKey, $consumerSecret);
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
                 $response = $client->image(
                     'A cute robot reading a book, digital art',
                     'rundiffusion/juggernaut-lightning-flux',
@@ -220,8 +291,9 @@ use BitmeshAI\BitmeshClient;
 
 $consumerKey = getenv('BITMESH_CONSUMER_KEY') ?: 'YOUR_CONSUMER_KEY';
 $consumerSecret = getenv('BITMESH_CONSUMER_SECRET') ?: 'YOUR_CONSUMER_SECRET';
+$apiBaseUrl = getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app';
 
-$client = new BitmeshClient($consumerKey, $consumerSecret);
+$client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
 
 // Start video generation (returns in_progress; use id to poll status)
 $response = $client->video(
@@ -242,10 +314,11 @@ PHP;
 
         $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
         $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
 
         if ($consumerKey !== '' && $consumerSecret !== '') {
             try {
-                $client = new BitmeshClient($consumerKey, $consumerSecret);
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
                 $response = $client->video(
                     'A cat walking in the rain, cinematic, 4k',
                     'ByteDance/Seedance-1.0-lite'
@@ -286,10 +359,11 @@ PHP;
 
         $consumerKey = (string) ($_ENV['BITMESH_CONSUMER_KEY'] ?? getenv('BITMESH_CONSUMER_KEY') ?: '');
         $consumerSecret = (string) ($_ENV['BITMESH_CONSUMER_SECRET'] ?? getenv('BITMESH_CONSUMER_SECRET') ?: '');
+        $apiBaseUrl = (string) ($_ENV['BITMESH_API_BASE_URL'] ?? getenv('BITMESH_API_BASE_URL') ?: 'https://aiproxyapi-production.up.railway.app');
 
         if ($consumerKey !== '' && $consumerSecret !== '') {
             try {
-                $client = new BitmeshClient($consumerKey, $consumerSecret);
+                $client = new BitmeshClient($consumerKey, $consumerSecret, $apiBaseUrl);
                 $response = $client->videoStatus($id);
                 $html .= "<h2>GET /video/" . htmlspecialchars($id) . "</h2><pre>" . htmlspecialchars(json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . "</pre>";
                 $status = $response['status'] ?? null;

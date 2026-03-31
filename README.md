@@ -8,6 +8,12 @@ Minimal PHP project to show Bitmesh.ai API usage (chat, image, video).
 composer install
 ```
 
+Create `.env` (or copy `example.env`) and set:
+
+- `BITMESH_CONSUMER_KEY`
+- `BITMESH_CONSUMER_SECRET`
+- `BITMESH_API_BASE_URL` (optional; defaults to production API URL)
+
 ## Run
 
 Point your web server document root at `public/`, or use PHP built-in server:
